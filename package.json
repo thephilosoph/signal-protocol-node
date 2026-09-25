@@ -1,0 +1,76 @@
+{
+  "name": "signal-protocol-node",
+  "version": "0.1.0",
+  "description": "TypeScript implementation of the Signal Protocol (X3DH + Double Ratchet) for Node.js and NestJS: end-to-end encrypted messaging with pluggable storage.",
+  "keywords": [
+    "signal",
+    "signal-protocol",
+    "x3dh",
+    "double-ratchet",
+    "e2ee",
+    "end-to-end-encryption",
+    "encryption",
+    "messaging",
+    "nestjs",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "nooreddin adleh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thephilosoph"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./nest": {
+      "types": "./dist/nest.d.ts",
+      "import": "./dist/nest.mjs",
+      "require": "./dist/nest.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.8.1"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@types/node": "^22.10.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
+  }
+}
