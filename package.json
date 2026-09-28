@@ -18,7 +18,7 @@
   "author": "nooreddin adleh",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thephilosoph"
+    "url": "git+https://github.com/thephilosoph/signal-protocol-node"
   },
   "engines": {
     "node": ">=18"
