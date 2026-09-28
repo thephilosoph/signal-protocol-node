@@ -1,5 +1,5 @@
 {
-  "name": "signal-protocol-node",
+  "name": "@thephilosoph/signal-protocol-node",
   "version": "0.1.0",
   "description": "TypeScript implementation of the Signal Protocol (X3DH + Double Ratchet) for Node.js and NestJS: end-to-end encrypted messaging with pluggable storage.",
   "keywords": [
