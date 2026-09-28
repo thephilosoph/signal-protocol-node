@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { NodeCryptoProvider } from '../src/crypto/node-crypto-provider';
+import { WebCryptoProvider } from '../src/crypto/web-crypto-provider';
 import { DecryptionFailedError, InvalidKeyError } from '../src/errors';
 import { concatBytes } from '../src/util/bytes';
 import type { CryptoProvider } from '../src/crypto/crypto-provider';
 
 const providers: Array<[string, CryptoProvider]> = [
   ['node', new NodeCryptoProvider()],
+  ['webcrypto', new WebCryptoProvider()],
 ];
 
 function hexToBytes(hex: string): Uint8Array {
@@ -112,6 +114,28 @@ describe.each(providers)('HKDF/HMAC/AES-GCM via %s provider', (name, crypto) => 
   });
 });
 
+describe('cross-provider compatibility', () => {
+  it('both providers agree on X25519 and verify each other’s signatures', async () => {
+    const node = new NodeCryptoProvider();
+    const web = new WebCryptoProvider();
+
+    const nodePair = await node.generateKeyPair();
+    const webPair = await web.generateKeyPair();
+    const viaNode = await node.agree(nodePair.privateKey, webPair.publicKey);
+    const viaWeb = await web.agree(webPair.privateKey, nodePair.publicKey);
+    expect(Array.from(viaNode)).toEqual(Array.from(viaWeb));
+
+    // Signatures need real Ed25519 signing keys:
+    const signer = await node.generateSigningKeyPair();
+    const message = new TextEncoder().encode('hello');
+    const signature = await node.sign(signer.privateKey, message);
+    expect(await web.verify(signer.publicKey, message, signature)).toBe(true);
+
+    const webSigner = await web.generateSigningKeyPair();
+    const webSignature = await web.sign(webSigner.privateKey, message);
+    expect(await node.verify(webSigner.publicKey, message, webSignature)).toBe(true);
+  });
+});
 
 describe('random bytes and helpers', () => {
   it('returns the requested length and does not repeat', async () => {

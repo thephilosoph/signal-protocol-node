@@ -23,6 +23,8 @@ import { SignalStore } from '../stores/signal-store';
 import { assertValidIdentifier, constantTimeEqual, bytesToUtf8, utf8ToBytes } from '../util/bytes';
 import { fromBase64, toBase64 } from '../util/base64';
 import { initiateX3dh, receiveX3dh } from '../x3dh/x3dh';
+import { computeSafetyNumber, formatSafetyNumber } from './safety-number';
+import { decodeSignalEnvelope } from './binary';
 
 /** Tunable behaviour of a client. */
 export interface SignalClientConfig {
@@ -399,7 +401,25 @@ export class SignalClient {
     return this.encrypt(remoteAddress, utf8ToBytes(text));
   }
 
+  /**
+   * Decrypt an envelope received from `remoteAddress`. Accepts any parsed JSON
+   * the transport delivered — or the raw binary form produced by
+   * {@link encodeSignalEnvelope} — and dispatches prekey vs regular messages.
+   */
+  async decrypt(remoteAddress: string, envelope: unknown): Promise<Uint8Array> {
+    assertValidIdentifier(remoteAddress, 'remoteAddress');
+    const parsed = envelope instanceof Uint8Array ? decodeSignalEnvelope(envelope) : parseEnvelope(envelope);
 
+    if (parsed.type === 'prekey') {
+      return this.decryptPreKeyMessage(remoteAddress, parsed);
+    }
+    return this.decryptRegularMessage(remoteAddress, parsed);
+  }
+
+  /** Decrypt an envelope and interpret the plaintext as UTF-8. */
+  async decryptText(remoteAddress: string, envelope: unknown): Promise<string> {
+    return bytesToUtf8(await this.decrypt(remoteAddress, envelope));
+  }
 
   private async decryptPreKeyMessage(
     remoteAddress: string,
@@ -584,7 +604,35 @@ export class SignalClient {
     });
   }
 
+  /**
+   * 60-digit safety number with one or more remote addresses (a user's
+   * devices). Order-independent, so both sides see the same value as long as
+   * they verify the same set of devices. Requires stored remote identities,
+   * i.e. a session was created or a message was received at least once.
+   * Compare it out-of-band (voice call, QR scan) to detect man-in-the-middle.
+   */
+  async getSafetyNumber(remoteAddresses: string | string[]): Promise<string> {
+    const addresses = Array.isArray(remoteAddresses) ? remoteAddresses : [remoteAddresses];
+    if (addresses.length === 0) {
+      throw new InvalidArgumentError('At least one remote address is required');
+    }
+    const keys: Uint8Array[] = [fromBase64(this.identity.dhKeyPair.publicKey)];
+    for (const address of addresses) {
+      const remote = await this.store.getRemoteIdentity(this.scope, address);
+      if (!remote) {
+        throw new RemoteIdentityNotFoundError(
+          `No known identity for "${address}" yet — create a session or receive a message first`,
+        );
+      }
+      keys.push(fromBase64(remote.dhKey));
+    }
+    return computeSafetyNumber(keys, this.crypto);
+  }
 
+  /** Grouped display form for {@link getSafetyNumber} output ("12345 67890 ..."). */
+  formatSafetyNumber(digits: string): string {
+    return formatSafetyNumber(digits);
+  }
 
   /** Forget the stored identity of a remote address (after explicit verification). */
   async removeRemoteIdentity(remoteAddress: string): Promise<void> {
